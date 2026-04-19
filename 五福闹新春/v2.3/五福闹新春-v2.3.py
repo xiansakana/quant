@@ -52,7 +52,7 @@ def initialize(context):
     g.lookback_days = 25                # 动量计算回看天数
     g.min_score_threshold = 0           # 动量得分下限
     g.max_score_threshold = 500           # 动量得分上限
-    g.score_threshold_ratio = 1       # 减少调仓控制得分比例
+    g.score_threshold_ratio = 0.8       # 减少调仓控制得分比例
 
     # 过滤开关及参数
     g.use_short_momentum_filter = True  # 短期动量过滤开关
@@ -65,7 +65,7 @@ def initialize(context):
     g.enable_annualized_return_filter = False  # 年化收益过滤开关
     g.min_annualized_return = 1.0        # 年化收益阈值
 
-    g.enable_ma_filter = False           # 均线过滤开关
+    g.enable_ma_filter = True           # 均线过滤开关
     g.ma_filter_days = 20                # 均线周期
 
     g.enable_volume_check = True         # 成交量过滤开关
@@ -83,7 +83,7 @@ def initialize(context):
     # 止损参数
     g.use_fixed_stop_loss = True         # 固定比例止损开关
     g.fixedStopLossThreshold = 0.95      # 固定止损比例（5%）
-    g.use_pct_stop_loss = False          # 当日跌幅止损开关
+    g.use_pct_stop_loss = True          # 当日跌幅止损开关
     g.pct_stop_loss_threshold = 0.95     # 当日跌幅止损比例
 
     # 冷却期参数
@@ -93,9 +93,9 @@ def initialize(context):
     
     # ==================== 定时任务 ====================
     run_daily(check_positions, time='09:04')                  # 每天9:04盘前检查持仓
-    run_daily(calculate_and_log_ranked_etfs, time='13:09:59') # 计算动量得分
-    run_daily(execute_sell_trades, time='13:10:00')           # 执行卖出
-    run_daily(execute_buy_trades, time='13:11:00')            # 执行买入
+    run_daily(calculate_and_log_ranked_etfs, time='09:39:59') # 计算动量得分
+    run_daily(execute_sell_trades, time='09:40:00')           # 执行卖出
+    run_daily(execute_buy_trades, time='09:41:00')            # 执行买入
 
     # 分钟级止损任务（每1分钟检查一次）
     for hour in range(9, 15):
