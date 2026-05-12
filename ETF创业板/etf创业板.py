@@ -84,6 +84,14 @@ def before_trading_start(context):
         g.ma200 = close_prices['close'].mean()
     else:
         g.ma200 = None
+    
+    # 开盘时打印市场状态
+    if g.ma200 is not None:
+        current_close = get_current_data()['399006.XSHE'].last_price
+        if current_close is not None:
+            market_status = "牛市" if current_close > g.ma200 else "熊市"
+            g.ret_threshold = g.bull_threshold if current_close > g.ma200 else g.bear_threshold
+            print(f" === 【市场状态】{market_status}，创业板指数{current_close:.2f}，MA200:{g.ma200:.2f}，阈值:{g.ret_threshold*100:.1f}%")
 ##
 ## 本策略在回测时，应按分钟回测
 def handle_data(context, data):
@@ -93,13 +101,6 @@ def handle_data(context, data):
     # 如果没有符合条件的ETF, 则跳过
     if len(g.etf_list) == 0:
         return
-    # 动态调整阈值：日线高于MA200为牛市(1.0%)，低于MA200为熊市(1.8%)
-    if g.ma200 is not None:
-        current_close = get_current_data()['399006.XSHE'].last_price
-        if current_close is not None:
-            market_status = "牛市" if current_close > g.ma200 else "熊市"
-            g.ret_threshold = g.bull_threshold if current_close > g.ma200 else g.bear_threshold
-            print(f" === 【市场状态】{market_status}，创业板指数{current_close:.2f}，MA200:{g.ma200:.2f}，阈值:{g.ret_threshold*100:.1f}%")
     # 1、计算当前各ETF的涨跌幅度，过滤停牌或异常数据
     current_data = get_current_data()
     ret_dict = {}
@@ -117,7 +118,6 @@ def handle_data(context, data):
     sorted_list = sorted(ret_dict.items(), key=lambda x: x[1])
     etf_worst = sorted_list[0][0]
     ret_worst = sorted_list[0][1]
-    # 3、检查是否已持有目标ETF（最弱ETF），若已持有且无其他需卖出的仓位，则跳过
     already_hold_worst = (
         etf_worst in context.portfolio.positions and
         context.portfolio.positions[etf_worst].closeable_amount > 0
