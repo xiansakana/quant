@@ -33,18 +33,18 @@ import time
 ##
 ## 初始化函数，设定基准等等
 def initialize(context):
-    # 设定基准，选用沪深300指数
-    set_benchmark('000300.XSHG')
+    # 设定基准，选用创业板指数
+    set_benchmark('399006.XSHE')
     # 开启避免未来数据的模式
     set_option("avoid_future_data", True)
     # 开启动态复权模式(真实价格)
     set_option('use_real_price', True)
     # 设置滑点
-    set_slippage(FixedSlippage(0.005))
+    set_slippage(FixedSlippage(0.01))
     # 调试时必须注释下面语句；调试完成后，开启下面语句，减少日志内容
     log.set_level('order', 'error')
     # 设置成交比例，即每日或每分钟内的成交量的20%【比较合理】
-    set_option('order_volume_ratio', 0.20)
+    set_option('order_volume_ratio', 1.00)
     # 设置交易费用
     set_order_cost(OrderCost(close_tax=0, open_commission=0.00025, close_commission=0.00025, min_commission=0), type='fund')
     # ETF 300指数基金池（原9只 + 新增15只）
@@ -64,20 +64,26 @@ def initialize(context):
         '159821.XSHE',  # 上市2021-03-12，基金规模   6.75亿元(2026-4-14) 创业板ETF中银证券
         '159205.XSHE',  # 上市2021-06-28，基金规模 192.48亿元(2026-4-14) 创业板ETF东财
         ]
-    # 过滤上市不到1年的ETF，在before_trading_start计算
-    g.etf_list = []
+    # ETF列表（直接使用池，不过滤上市时间）
+    g.etf_list = g.etf_pool
     # 昨日的收盘价，在before_trading_start计算
     g.yest_close_df = pd.DataFrame()
-    # 与最佳ETF涨跌幅的差值阈值，取0.7%
-    g.ret_threshold = 0.7/100
+    # 动态阈值参数
+    g.bull_threshold = 1.0/100   # 牛市阈值：1.0%
+    g.bear_threshold = 1.8/100   # 熊市阈值：1.8%
+    g.ret_threshold = g.bull_threshold  # 初始使用牛市阈值
+    g.ma200 = None  # MA200值，用于判断牛熊市
 ##
 ## 开盘前运行
 def before_trading_start(context):
-    # 1、过滤上市不到1年的ETF
-    date_limit = context.current_dt.date() - pd.Timedelta(days=365)
-    g.etf_list = [etf for etf in g.etf_pool if get_security_info(etf) is not None and get_security_info(etf).start_date < date_limit]
-    # 所有ETF 300昨日收盘价
+    # 所有ETF昨日收盘价
     g.yest_close_df = history(1, '1d', 'close', g.etf_list)
+    # 计算基准指数的MA200，用于判断牛熊市
+    close_prices = attribute_history('399006.XSHE', 200, '1d', 'close')
+    if len(close_prices) >= 200:
+        g.ma200 = close_prices['close'].mean()
+    else:
+        g.ma200 = None
 ##
 ## 本策略在回测时，应按分钟回测
 def handle_data(context, data):
@@ -87,6 +93,13 @@ def handle_data(context, data):
     # 如果没有符合条件的ETF, 则跳过
     if len(g.etf_list) == 0:
         return
+    # 动态调整阈值：日线高于MA200为牛市(1.0%)，低于MA200为熊市(1.8%)
+    if g.ma200 is not None:
+        current_close = get_current_data()['399006.XSHE'].last_price
+        if current_close is not None:
+            market_status = "牛市" if current_close > g.ma200 else "熊市"
+            g.ret_threshold = g.bull_threshold if current_close > g.ma200 else g.bear_threshold
+            print(f" === 【市场状态】{market_status}，创业板指数{current_close:.2f}，MA200:{g.ma200:.2f}，阈值:{g.ret_threshold*100:.1f}%")
     # 1、计算当前各ETF的涨跌幅度，过滤停牌或异常数据
     current_data = get_current_data()
     ret_dict = {}
