@@ -1,0 +1,21 @@
+{
+  "capital": 100000,
+  "benchmark": "159941.XSHE",
+  "train": ["2024-01-01", "2024-12-31"],
+  "holdout": ["2025-01-01", "2025-12-31"],
+  "latest_holdout": ["2026-01-01", "2026-10-09"],
+  "selection": "选择2024年度净收益最高的候选；留出期不再据收益调参",
+  "candidates": [
+    {"signal_mode": "daily", "threshold": 0.005},
+    {"signal_mode": "daily", "threshold": 0.01},
+    {"signal_mode": "rolling", "threshold": 0.005},
+    {"signal_mode": "rolling", "threshold": 0.01},
+    {"signal_mode": "nav", "threshold": 0.005}
+  ],
+  "commission_each_side": 0.00025,
+  "minimum_commission": 5,
+  "fixed_slippage_roundtrip_yuan": 0.004,
+  "participation": 0.05,
+  "cash_reserve": 0.01,
+  "disclaimer": "有限候选比较，不保证全局最优；纯多头相对价差交易，非无风险套利。净值日期滞后不等于公告时点已完整验证。"
+}
